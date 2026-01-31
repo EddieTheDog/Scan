@@ -27,9 +27,11 @@
 </table>
 
 <script>
+const backendURL = "http://localhost:8787"; // <-- Update to Worker URL if deployed
+
 async function loadList() {
   try {
-    const res = await fetch("/list");
+    const res = await fetch(`${backendURL}/list`);
     const data = await res.json();
     const tbody = document.getElementById("list");
     tbody.innerHTML = "";
@@ -55,7 +57,7 @@ async function loadList() {
 }
 
 async function approve(id) {
-  await fetch("/approve", {
+  await fetch(`${backendURL}/approve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, status: "approved" })
@@ -64,7 +66,7 @@ async function approve(id) {
 }
 
 async function decline(id) {
-  await fetch("/approve", {
+  await fetch(`${backendURL}/approve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, status: "declined" })
@@ -72,7 +74,7 @@ async function decline(id) {
   loadList();
 }
 
-// Auto-refresh every 3 seconds
+// Refresh every 3 seconds
 setInterval(loadList, 3000);
 loadList();
 </script>
