@@ -1,21 +1,35 @@
 async function submitForm() {
-  const qr = document.getElementById("qr").value;
-  const name = document.getElementById("name").value;
-  const seat = document.getElementById("seat").value;
+  const qr = document.getElementById("qr").value.trim();
+  const name = document.getElementById("name").value.trim();
+  const seat = document.getElementById("seat").value.trim();
 
   if (!qr || !name) {
-    alert("QR and Name required");
+    alert("QR and Name are required");
     return;
   }
 
-  await fetch("/submit", {
-    method: "POST",
-    body: JSON.stringify({ qr, name, seat })
-  });
+  try {
+    const res = await fetch("/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qr, name, seat })
+    });
 
-  document.getElementById("qr").value = "";
-  document.getElementById("name").value = "";
-  document.getElementById("seat").value = "";
+    const data = await res.json();
 
-  alert("Saved. Send them forward.");
+    if (!data.ok) {
+      alert("Error: " + (data.error || "Unknown error"));
+      return;
+    }
+
+    // Clear fields after successful submission
+    document.getElementById("qr").value = "";
+    document.getElementById("name").value = "";
+    document.getElementById("seat").value = "";
+
+    alert("Saved successfully. You can let them proceed.");
+
+  } catch (err) {
+    alert("Failed to submit: " + err.message);
+  }
 }
