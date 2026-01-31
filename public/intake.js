@@ -22,12 +22,12 @@ async function submitForm() {
       return;
     }
 
-    // Clear fields after successful submission
+    // Clear fields
     document.getElementById("qr").value = "";
     document.getElementById("name").value = "";
     document.getElementById("seat").value = "";
 
-    alert("Saved successfully. You can let them proceed.");
+    alert("Saved successfully. They can proceed.");
 
   } catch (err) {
     alert("Failed to submit: " + err.message);
