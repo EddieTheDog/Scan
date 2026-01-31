@@ -1,9 +1,8 @@
 const statusEl = document.getElementById("status");
 
-// Load pending check-ins
 async function load() {
   try {
-    statusEl.textContent = ""; // Clear any previous status messages
+    statusEl.textContent = "";
 
     const res = await fetch("/list");
     const data = await res.json();
@@ -17,8 +16,7 @@ async function load() {
     const el = document.getElementById("list");
     el.innerHTML = "";
 
-    // Only show entries with status 'pending'
-    const pending = data.filter(row => row.status === "pending");
+    const pending = data.filter(row => row.status !== "approved" && row.status !== "declined");
 
     if (pending.length === 0) {
       el.innerHTML = "<i>No pending check-ins</i>";
@@ -55,31 +53,28 @@ async function load() {
   }
 }
 
-// Approve attendee
 async function approve(id, btn) {
   await updateStatus(id, "approved", btn);
 }
 
-// Decline attendee
 async function decline(id, btn) {
   await updateStatus(id, "declined", btn);
 }
 
-// Update status in DB and remove from screen
 async function updateStatus(id, newStatus, btn) {
   const parent = btn.closest("div");
-  parent.style.opacity = 0.5; // visually indicate processing
+  parent.style.opacity = 0.5;
   statusEl.textContent = "Hold: Please wait...";
 
   try {
     const res = await fetch("/approve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status: newStatus }) // modify approve.js to accept status
+      body: JSON.stringify({ id, status: newStatus })
     });
     const data = await res.json();
     if (data.ok) {
-      parent.remove(); // remove entry from admin screen
+      parent.remove();
       statusEl.textContent = "";
     } else {
       statusEl.textContent = "Hold: Error updating entry, try again.";
@@ -92,6 +87,5 @@ async function updateStatus(id, newStatus, btn) {
   }
 }
 
-// Auto-refresh every 2 seconds
 setInterval(load, 2000);
 load();
