@@ -1,18 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
+<meta charset="UTF-8">
+<title>Admin Panel</title>
+<style>
+  body { font-family: sans-serif; padding: 30px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  button { margin: 0 5px; }
+</style>
 </head>
 <body>
+<h1>Admin Panel - Pending Check-Ins</h1>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Seat</th>
+      <th>QR</th>
+      <th>Scanned At</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="list"></tbody>
+</table>
 
-<button onclick="manualRefresh()">🔄 Refresh</button>
-<span id="countdown"></span>
-<hr>
+<script>
+async function loadList() {
+  const res = await fetch("/list");
+  const data = await res.json();
+  const tbody = document.getElementById("list");
+  tbody.innerHTML = "";
 
-<div id="list"></div>
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.id}</td>
+      <td>${row.name}</td>
+      <td>${row.seat}</td>
+      <td>${row.qr_value}</td>
+      <td>${row.scanned_at}</td>
+      <td>
+        <button onclick="approve(${row.id})">Approve</button>
+        <button onclick="decline(${row.id})">Decline</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-<script src="admin.js"></script>
+async function approve(id) {
+  await fetch("/approve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, status: "approved" })
+  });
+  loadList();
+}
+
+async function decline(id) {
+  await fetch("/approve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, status: "declined" })
+  });
+  loadList();
+}
+
+// Refresh every 3 seconds
+setInterval(loadList, 3000);
+loadList();
+</script>
 </body>
 </html>
