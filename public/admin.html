@@ -8,17 +8,10 @@ body { font-family: sans-serif; padding: 30px; }
 table { border-collapse: collapse; width: 100%; }
 th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
 button { margin: 0 5px; }
-textarea { width: 100%; margin: 10px 0; }
 </style>
 </head>
 <body>
-<h1>Admin Panel</h1>
-
-<h2>Import Intake Data</h2>
-<textarea id="importData" rows="10" placeholder="Paste JSON from intake page"></textarea><br/>
-<button onclick="loadData()">Load Data</button>
-
-<h2>Pending Check-Ins</h2>
+<h1>Admin Panel - Pending Check-Ins</h1>
 <table>
   <thead>
     <tr>
@@ -27,82 +20,59 @@ textarea { width: 100%; margin: 10px 0; }
       <th>Seat</th>
       <th>QR</th>
       <th>Scanned At</th>
-      <th>Status</th>
       <th>Actions</th>
     </tr>
   </thead>
   <tbody id="list"></tbody>
 </table>
 
-<h2>Export Updated Data</h2>
-<button onclick="exportData()">Export to JSON</button>
-<textarea id="exportData" rows="10"></textarea>
-
 <script>
-let checkins = [];
-
-// Load data from intake
-function loadData() {
-  const raw = document.getElementById("importData").value;
-  if(!raw) return alert("Paste JSON data from intake page first!");
+async function loadList() {
   try {
-    const data = JSON.parse(raw);
-    checkins = data;
-    renderTable();
-  } catch(e) {
-    alert("Invalid JSON");
-    console.error(e);
-  }
+    const res = await fetch("/list");
+    const data = await res.json();
+    const tbody = document.getElementById("list");
+    tbody.innerHTML = "";
+
+    data.forEach(c => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${c.id}</td>
+        <td>${c.name}</td>
+        <td>${c.seat}</td>
+        <td>${c.qr_value}</td>
+        <td>${c.scanned_at}</td>
+        <td>
+          <button onclick="approve(${c.id})">Approve</button>
+          <button onclick="decline(${c.id})">Decline</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(err) { console.error(err); }
 }
 
-// Render table
-function renderTable() {
-  const tbody = document.getElementById("list");
-  tbody.innerHTML = "";
-
-  checkins.forEach(c => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${c.id}</td>
-      <td>${c.name}</td>
-      <td>${c.seat}</td>
-      <td>${c.qr}</td>
-      <td>${c.scannedAt}</td>
-      <td>${c.status}</td>
-      <td>
-        ${c.status === 'pending' ? 
-          `<button onclick="approve(${c.id})">Approve</button>
-           <button onclick="decline(${c.id})">Decline</button>` : ''}
-      </td>
-    `;
-    tbody.appendChild(tr);
+async function approve(id) {
+  await fetch("/approve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, status: "approved" })
   });
+  loadList();
 }
 
-// Approve / Decline
-function approve(id) {
-  const entry = checkins.find(c => c.id === id);
-  if(entry) {
-    entry.status = "approved";
-    entry.approvedAt = new Date().toLocaleString();
-    renderTable();
-  }
+async function decline(id) {
+  await fetch("/approve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, status: "declined" })
+  });
+  loadList();
 }
 
-function decline(id) {
-  const entry = checkins.find(c => c.id === id);
-  if(entry) {
-    entry.status = "declined";
-    entry.approvedAt = new Date().toLocaleString();
-    renderTable();
-  }
-}
-
-// Export updated data
-function exportData() {
-  document.getElementById("exportData").value = JSON.stringify(checkins, null, 2);
-  alert("Data is ready to copy and send!");
-}
+// Auto-refresh every 3 seconds
+setInterval(loadList, 3000);
+loadList();
 </script>
 </body>
 </html>
