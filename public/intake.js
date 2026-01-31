@@ -1,19 +1,19 @@
 let currentQR = null;
-let pollingTimer = null;
+let pollTimer = null;
 
-function goToInfo() {
+function nextStep() {
   const qrInput = document.getElementById("qr");
   const qr = qrInput.value.trim();
 
   if (!qr) {
-    alert("Please enter or scan a QR code");
+    alert("Enter QR code");
     return;
   }
 
   currentQR = qr;
 
-  document.getElementById("qrPage").classList.remove("active");
-  document.getElementById("infoPage").classList.add("active");
+  document.getElementById("stepQR").style.display = "none";
+  document.getElementById("stepForm").style.display = "block";
 }
 
 async function submitForm() {
@@ -22,7 +22,7 @@ async function submitForm() {
   const statusEl = document.getElementById("status");
 
   if (!name) {
-    alert("Please enter your name");
+    alert("Name required");
     return;
   }
 
@@ -43,41 +43,31 @@ async function submitForm() {
 
 function startPolling() {
   stopPolling();
-
-  pollingTimer = setInterval(checkStatus, 5000);
+  pollTimer = setInterval(checkStatus, 5000);
 }
 
 function stopPolling() {
-  if (pollingTimer) {
-    clearInterval(pollingTimer);
-    pollingTimer = null;
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
   }
 }
 
 async function checkStatus() {
-  if (!currentQR) return;
+  const res = await fetch(`/status?qr=${encodeURIComponent(currentQR)}`);
+  const data = await res.json();
 
-  try {
-    const res = await fetch(
-      `/status?qr=${encodeURIComponent(currentQR)}`
-    );
-    const data = await res.json();
+  if (data.status === "pending") return;
 
-    if (data.status === "pending") return;
+  stopPolling();
 
-    stopPolling();
+  const statusEl = document.getElementById("status");
+  statusEl.textContent =
+    data.status === "approved"
+      ? "✅ Approved — please proceed"
+      : "❌ Declined — please see staff";
 
-    const statusEl = document.getElementById("status");
-    statusEl.textContent =
-      data.status === "approved"
-        ? "✅ Approved — please proceed"
-        : "❌ Declined — please see staff";
-
-    setTimeout(resetKiosk, 2500);
-
-  } catch (err) {
-    // Network hiccup → try again next interval
-  }
+  setTimeout(resetKiosk, 3000);
 }
 
 function resetKiosk() {
@@ -89,6 +79,6 @@ function resetKiosk() {
   document.getElementById("seat").value = "";
   document.getElementById("status").textContent = "";
 
-  document.getElementById("infoPage").classList.remove("active");
-  document.getElementById("qrPage").classList.add("active");
+  document.getElementById("stepForm").style.display = "none";
+  document.getElementById("stepQR").style.display = "block";
 }
