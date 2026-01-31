@@ -1,21 +1,16 @@
 export async function onRequestPost({ request, env }) {
   try {
-    const { id } = await request.json();
+    const { id, status } = await request.json();
 
-    if (!id) {
-      return new Response(JSON.stringify({ ok: false, error: "ID required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
+    if (!id || !status) throw new Error("ID and status required");
+    if (!env.DB) throw new Error("DB binding not found");
 
     await env.DB.prepare(`
       UPDATE checkins
-      SET status='approved',
-          approved_at=?
-      WHERE id=?
+      SET status = ?, approved_at = ?
+      WHERE id = ?
     `)
-    .bind(new Date().toISOString(), id)
+    .bind(status, new Date().toISOString(), id)
     .run();
 
     return new Response(JSON.stringify({ ok: true }), {
@@ -23,6 +18,7 @@ export async function onRequestPost({ request, env }) {
     });
 
   } catch (err) {
+    console.error("Approve/Decline error:", err);
     return new Response(JSON.stringify({ ok: false, error: err.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" }
