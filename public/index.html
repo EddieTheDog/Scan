@@ -20,10 +20,12 @@
 <div id="status"></div>
 
 <script>
+/* ===== In-memory data store ===== */
+window.checkins = window.checkins || []; // global shared array
+
 let scannedQR = null;
 
-// In this version, we just use a text box
-async function submitCheckIn() {
+function submitCheckIn() {
   scannedQR = document.getElementById("qr").value.trim();
   const name = document.getElementById("name").value.trim();
   const seat = document.getElementById("seat").value.trim();
@@ -33,36 +35,29 @@ async function submitCheckIn() {
     return;
   }
 
-  document.getElementById("status").textContent = "Submitting...";
-
-  try {
-    const res = await fetch("/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ qr: scannedQR, name, seat })
+  // Add check-in to in-memory array
+  if (!window.checkins.find(c => c.qr === scannedQR)) {
+    window.checkins.push({
+      id: Date.now(), // unique ID
+      qr: scannedQR,
+      name: name,
+      seat: seat,
+      status: "pending",
+      scannedAt: new Date().toLocaleString(),
+      approvedAt: null
     });
-    const data = await res.json();
-    if(data.ok) {
-      document.getElementById("status").textContent = "Waiting for approval...";
-      pollStatus();
-    }
-  } catch(err) {
-    document.getElementById("status").textContent = "Error submitting check-in";
-    console.error(err);
   }
+
+  document.getElementById("status").textContent = "Waiting for approval...";
+  pollStatus();
 }
 
 function pollStatus() {
-  const interval = setInterval(async () => {
-    try {
-      const res = await fetch(`/status?qr=${encodeURIComponent(scannedQR)}`);
-      const data = await res.json();
-      if(data.status !== "pending") {
-        document.getElementById("status").textContent = "Status: " + data.status.toUpperCase();
-        clearInterval(interval);
-      }
-    } catch(err) {
-      console.error(err);
+  const interval = setInterval(() => {
+    const entry = window.checkins.find(c => c.qr === scannedQR);
+    if (entry && entry.status !== "pending") {
+      document.getElementById("status").textContent = "Status: " + entry.status.toUpperCase();
+      clearInterval(interval);
     }
   }, 3000);
 }
