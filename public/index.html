@@ -4,62 +4,61 @@
 <meta charset="UTF-8">
 <title>Check-In</title>
 <style>
-  body { font-family: sans-serif; text-align: center; padding: 50px; }
-  input, button { font-size: 1rem; padding: 0.5rem; margin: 0.5rem; }
-  #status { margin-top: 1rem; font-weight: bold; }
+body { font-family: sans-serif; text-align: center; padding: 50px; }
+input, button, textarea { font-size: 1rem; padding: 0.5rem; margin: 0.5rem; }
+#status { margin-top: 1rem; font-weight: bold; }
 </style>
 </head>
 <body>
 <h1>Check-In</h1>
 
-<input id="qr" placeholder="Enter QR Code Value" />
-<input id="name" placeholder="Your Name" />
-<input id="seat" placeholder="Seat Number (Optional)" />
+<input id="qr" placeholder="Enter QR Code Value" /><br/>
+<input id="name" placeholder="Your Name" /><br/>
+<input id="seat" placeholder="Seat Number (Optional)" /><br/>
 <button onclick="submitCheckIn()">Submit</button>
 
 <div id="status"></div>
 
+<h2>Export Data (copy to send to Admin)</h2>
+<textarea id="exportData" rows="10" cols="50" readonly></textarea>
+
 <script>
-/* ===== In-memory data store ===== */
-window.checkins = window.checkins || []; // global shared array
+let checkins = [];
 
-let scannedQR = null;
-
+// Submit a new check-in
 function submitCheckIn() {
-  scannedQR = document.getElementById("qr").value.trim();
+  const qr = document.getElementById("qr").value.trim();
   const name = document.getElementById("name").value.trim();
   const seat = document.getElementById("seat").value.trim();
 
-  if(!scannedQR || !name) {
+  if(!qr || !name) {
     alert("QR code and Name are required");
     return;
   }
 
-  // Add check-in to in-memory array
-  if (!window.checkins.find(c => c.qr === scannedQR)) {
-    window.checkins.push({
-      id: Date.now(), // unique ID
-      qr: scannedQR,
-      name: name,
-      seat: seat,
-      status: "pending",
-      scannedAt: new Date().toLocaleString(),
-      approvedAt: null
-    });
+  if(checkins.find(c => c.qr === qr)) {
+    alert("This QR code is already submitted!");
+    return;
   }
 
-  document.getElementById("status").textContent = "Waiting for approval...";
-  pollStatus();
+  const entry = {
+    id: Date.now(),
+    qr,
+    name,
+    seat,
+    status: "pending",
+    scannedAt: new Date().toLocaleString(),
+    approvedAt: null
+  };
+  checkins.push(entry);
+
+  document.getElementById("status").textContent = "Submitted: Waiting for approval";
+  updateExport();
 }
 
-function pollStatus() {
-  const interval = setInterval(() => {
-    const entry = window.checkins.find(c => c.qr === scannedQR);
-    if (entry && entry.status !== "pending") {
-      document.getElementById("status").textContent = "Status: " + entry.status.toUpperCase();
-      clearInterval(interval);
-    }
-  }, 3000);
+// Update the export textarea
+function updateExport() {
+  document.getElementById("exportData").value = JSON.stringify(checkins, null, 2);
 }
 </script>
 </body>
