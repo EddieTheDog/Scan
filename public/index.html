@@ -1,33 +1,54 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Event Check-In</title>
-  <style>
-    .page { display: none; }
-    .active { display: block; }
-    #status { margin-top: 15px; font-weight: bold; }
-  </style>
+<meta charset="UTF-8">
+<title>Check-In</title>
+<style>
+  body { font-family: sans-serif; text-align: center; padding: 50px; }
+  input, button { font-size: 1rem; padding: 0.5rem; margin: 0.5rem; }
+  #status { margin-top: 1rem; font-weight: bold; }
+</style>
 </head>
 <body>
+<h1>QR Code Check-In</h1>
 
-<div id="qrPage" class="page active">
-  <h2>Enter QR Code</h2>
-  <input id="qr" placeholder="Scan or enter QR">
-  <br><br>
-  <button onclick="goToInfo()">Next</button>
-</div>
+<input id="qr" placeholder="QR Code Value" />
+<input id="name" placeholder="Your Name" />
+<input id="seat" placeholder="Seat Number (Optional)" />
+<button onclick="submitCheckIn()">Submit</button>
 
-<div id="infoPage" class="page">
-  <h2>Enter Info</h2>
-  <input id="name" placeholder="Name">
-  <br><br>
-  <input id="seat" placeholder="Seat (optional)">
-  <br><br>
-  <button onclick="submitForm()">Submit</button>
-  <div id="status"></div>
-</div>
+<div id="status"></div>
 
-<script src="intake.js"></script>
+<script>
+async function submitCheckIn() {
+  const qr = document.getElementById("qr").value;
+  const name = document.getElementById("name").value;
+  const seat = document.getElementById("seat").value;
+  if(!qr || !name) {
+    alert("QR and Name are required");
+    return;
+  }
+
+  document.getElementById("status").textContent = "Submitting...";
+  
+  await fetch("/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ qr, name, seat })
+  });
+
+  document.getElementById("status").textContent = "Waiting for approval...";
+
+  // Start polling every 3 seconds
+  const interval = setInterval(async () => {
+    const res = await fetch(`/status?qr=${encodeURIComponent(qr)}`);
+    const data = await res.json();
+    if(data.status !== "pending") {
+      document.getElementById("status").textContent = "Status: " + data.status.toUpperCase();
+      clearInterval(interval);
+    }
+  }, 3000);
+}
+</script>
 </body>
 </html>
