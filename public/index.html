@@ -25,15 +25,18 @@
 const statusEl = document.getElementById("status");
 let scannedQR = null;
 
-// Initialize QR scanner
+// Change this to your backend URL if deployed
+const backendURL = "http://localhost:8787"; // <-- Update to Worker URL if deployed
+
+// Initialize QR scanner with front camera
 const html5QrCode = new Html5Qrcode("preview");
 html5QrCode.start(
-  { facingMode: "environment" },
+  { facingMode: "user" }, // front camera
   { fps: 10, qrbox: 250 },
   qrCodeMessage => {
     scannedQR = qrCodeMessage;
     statusEl.textContent = "QR scanned: " + scannedQR;
-    submitCheckIn(); // Auto-submit after scanning
+    submitCheckIn();
     html5QrCode.stop();
   }
 ).catch(err => console.log("QR scanner error:", err));
@@ -50,7 +53,7 @@ async function submitCheckIn() {
   statusEl.textContent = "Submitting...";
 
   try {
-    const res = await fetch("/submit", {
+    const res = await fetch(`${backendURL}/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ qr: scannedQR, name, seat })
@@ -69,7 +72,7 @@ async function submitCheckIn() {
 function pollStatus() {
   const interval = setInterval(async () => {
     try {
-      const res = await fetch(`/status?qr=${encodeURIComponent(scannedQR)}`);
+      const res = await fetch(`${backendURL}/status?qr=${encodeURIComponent(scannedQR)}`);
       const data = await res.json();
       if(data.status !== "pending") {
         statusEl.textContent = "Status: " + data.status.toUpperCase();
