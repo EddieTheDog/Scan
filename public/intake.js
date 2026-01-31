@@ -1,11 +1,17 @@
 let currentQR = null;
-let polling = false;
+let pollingTimer = null;
 
 function goToInfo() {
-  const qr = document.getElementById("qr").value.trim();
-  if (!qr) return alert("Enter QR code");
+  const qrInput = document.getElementById("qr");
+  const qr = qrInput.value.trim();
+
+  if (!qr) {
+    alert("Please enter or scan a QR code");
+    return;
+  }
 
   currentQR = qr;
+
   document.getElementById("qrPage").classList.remove("active");
   document.getElementById("infoPage").classList.add("active");
 }
@@ -15,49 +21,67 @@ async function submitForm() {
   const seat = document.getElementById("seat").value.trim();
   const statusEl = document.getElementById("status");
 
-  if (!name) return alert("Enter name");
+  if (!name) {
+    alert("Please enter your name");
+    return;
+  }
 
-  statusEl.textContent = "Awaiting approval…";
-  polling = true;
+  statusEl.textContent = "⏳ Awaiting approval…";
 
   await fetch("/submit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ qr: currentQR, name, seat })
+    body: JSON.stringify({
+      qr: currentQR,
+      name,
+      seat
+    })
   });
 
-  pollStatus();
+  startPolling();
 }
 
-async function pollStatus() {
-  if (!polling || !currentQR) return;
+function startPolling() {
+  stopPolling();
+
+  pollingTimer = setInterval(checkStatus, 5000);
+}
+
+function stopPolling() {
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
+    pollingTimer = null;
+  }
+}
+
+async function checkStatus() {
+  if (!currentQR) return;
 
   try {
-    const res = await fetch(`/status?qr=${encodeURIComponent(currentQR)}`);
+    const res = await fetch(
+      `/status?qr=${encodeURIComponent(currentQR)}`
+    );
     const data = await res.json();
 
-    if (data.status === "pending") {
-      setTimeout(pollStatus, 5000);
-      return;
-    }
+    if (data.status === "pending") return;
 
-    polling = false;
+    stopPolling();
 
     const statusEl = document.getElementById("status");
     statusEl.textContent =
       data.status === "approved"
-        ? "✅ Approved — you may proceed"
+        ? "✅ Approved — please proceed"
         : "❌ Declined — please see staff";
 
-    setTimeout(resetForm, 2000);
+    setTimeout(resetKiosk, 2500);
 
-  } catch {
-    setTimeout(pollStatus, 8000);
+  } catch (err) {
+    // Network hiccup → try again next interval
   }
 }
 
-function resetForm() {
-  polling = false;
+function resetKiosk() {
+  stopPolling();
   currentQR = null;
 
   document.getElementById("qr").value = "";
