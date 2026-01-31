@@ -1,20 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>WIX Check-In</title>
+  <meta charset="UTF-8">
+  <title>Event Check-In</title>
 </head>
 <body>
+  <h1>Scan QR & Enter Info</h1>
+  <label>QR Code:</label>
+  <input type="text" id="qr" placeholder="Scan QR or enter URL"><br><br>
+  <label>Name:</label>
+  <input type="text" id="name" placeholder="Full name"><br><br>
+  <label>Seat:</label>
+  <input type="text" id="seat" placeholder="Optional seat"><br><br>
+  <button onclick="submitForm()">Submit</button>
 
-<h2>Scan Ticket QR</h2>
-<input id="qr" placeholder="Scan QR code" autofocus>
-
-<h3>Attendee Info</h3>
-<input id="name" placeholder="Name">
-<input id="seat" placeholder="Seat / Section">
-
-<button onclick="submitForm()">Submit</button>
-
-<script src="intake.js"></script>
+  <script src="intake.js"></script>
 </body>
 </html>
