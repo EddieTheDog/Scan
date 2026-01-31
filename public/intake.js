@@ -1,21 +1,35 @@
 let currentQR = null;
 
+// Move to Info Page
+function goToInfo() {
+  const qrInput = document.getElementById("qr").value.trim();
+  if (!qrInput) {
+    alert("Please enter QR code");
+    return;
+  }
+  currentQR = qrInput;
+  document.getElementById("qrPage").classList.remove("active");
+  document.getElementById("infoPage").classList.add("active");
+}
+
+// Submit info
 async function submitForm() {
-  const qr = document.getElementById("qr").value.trim();
   const name = document.getElementById("name").value.trim();
   const seat = document.getElementById("seat").value.trim();
   const statusEl = document.getElementById("status");
 
-  if (!qr || !name) {
-    alert("QR and Name are required");
+  if (!name) {
+    alert("Name is required");
     return;
   }
+
+  statusEl.textContent = "Awaiting approval, please wait...";
 
   try {
     const res = await fetch("/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ qr, name, seat })
+      body: JSON.stringify({ qr: currentQR, name, seat })
     });
 
     const data = await res.json();
@@ -23,9 +37,6 @@ async function submitForm() {
       statusEl.textContent = "Error submitting: " + (data.error || "Unknown");
       return;
     }
-
-    currentQR = qr;
-    statusEl.textContent = "Thank you for submitting, please hold...";
 
     // Start polling for admin decision
     pollStatus();
@@ -35,6 +46,7 @@ async function submitForm() {
   }
 }
 
+// Poll D1 for admin decision
 async function pollStatus() {
   const statusEl = document.getElementById("status");
 
@@ -44,24 +56,21 @@ async function pollStatus() {
     const res = await fetch("/list");
     const data = await res.json();
 
-    // Find current attendee
     const row = data.find(r => r.qr_value === currentQR);
-    if (!row) {
-      // Still pending
+    if (!row || row.status === "pending") {
+      // still waiting
       setTimeout(pollStatus, 1000);
       return;
     }
 
     if (row.status === "approved") {
       statusEl.textContent = "✅ Approved! You may proceed.";
-      resetForm();
     } else if (row.status === "declined") {
       statusEl.textContent = "❌ Declined. Please see admin.";
-      resetForm();
-    } else {
-      // Still pending
-      setTimeout(pollStatus, 1000);
     }
+
+    // Flash for 2 seconds, then reset to QR page
+    setTimeout(resetForm, 2000);
 
   } catch (err) {
     statusEl.textContent = "Hold: Technical difficulties...";
@@ -69,9 +78,14 @@ async function pollStatus() {
   }
 }
 
+// Reset form for next attendee
 function resetForm() {
+  currentQR = null;
   document.getElementById("qr").value = "";
   document.getElementById("name").value = "";
   document.getElementById("seat").value = "";
-  currentQR = null;
+  document.getElementById("status").textContent = "";
+
+  document.getElementById("infoPage").classList.remove("active");
+  document.getElementById("qrPage").classList.add("active");
 }
