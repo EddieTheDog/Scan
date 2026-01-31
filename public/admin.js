@@ -1,20 +1,31 @@
-// Load latest check-ins every 2 seconds
+const statusEl = document.getElementById("status");
+
+// Load pending check-ins
 async function load() {
   try {
+    statusEl.textContent = ""; // Clear any previous status messages
+
     const res = await fetch("/list");
     const data = await res.json();
 
-    // Check for errors from the backend
     if (!Array.isArray(data)) {
       console.error("Expected array, got:", data);
-      document.getElementById("list").innerHTML = "Failed to load data: " + (data.error || "Unknown error");
+      statusEl.textContent = "Hold: There might be technical difficulties.";
       return;
     }
 
     const el = document.getElementById("list");
     el.innerHTML = "";
 
-    data.forEach(row => {
+    // Only show entries with status 'pending'
+    const pending = data.filter(row => row.status === "pending");
+
+    if (pending.length === 0) {
+      el.innerHTML = "<i>No pending check-ins</i>";
+      return;
+    }
+
+    pending.forEach(row => {
       const div = document.createElement("div");
       div.style.border = "1px solid #ccc";
       div.style.margin = "10px";
@@ -25,12 +36,12 @@ async function load() {
         Seat: ${row.seat || "—"}<br>
         Status: ${row.status}<br>
         <canvas id="qr-${row.id}"></canvas><br>
-        <button onclick="approve(${row.id})">Accept</button>
+        <button onclick="approve(${row.id}, this)">Approve</button>
+        <button onclick="decline(${row.id}, this)">Decline</button>
       `;
 
       el.appendChild(div);
 
-      // Generate QR code on the canvas
       try {
         QRCode.toCanvas(document.getElementById(`qr-${row.id}`), row.qr_value);
       } catch (err) {
@@ -40,26 +51,44 @@ async function load() {
 
   } catch (err) {
     console.error("Load error:", err);
-    document.getElementById("list").innerHTML = "Error loading data: " + err.message;
+    statusEl.textContent = "Hold: There might be technical difficulties.";
   }
 }
 
 // Approve attendee
-async function approve(id) {
+async function approve(id, btn) {
+  await updateStatus(id, "approved", btn);
+}
+
+// Decline attendee
+async function decline(id, btn) {
+  await updateStatus(id, "declined", btn);
+}
+
+// Update status in DB and remove from screen
+async function updateStatus(id, newStatus, btn) {
+  const parent = btn.closest("div");
+  parent.style.opacity = 0.5; // visually indicate processing
+  statusEl.textContent = "Hold: Please wait...";
+
   try {
     const res = await fetch("/approve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
+      body: JSON.stringify({ id, status: newStatus }) // modify approve.js to accept status
     });
     const data = await res.json();
     if (data.ok) {
-      load(); // refresh list after approval
+      parent.remove(); // remove entry from admin screen
+      statusEl.textContent = "";
     } else {
-      alert("Approve failed: " + data.error);
+      statusEl.textContent = "Hold: Error updating entry, try again.";
+      parent.style.opacity = 1;
     }
   } catch (err) {
-    alert("Approve failed: " + err.message);
+    statusEl.textContent = "Hold: Technical difficulties.";
+    parent.style.opacity = 1;
+    console.error(err);
   }
 }
 
