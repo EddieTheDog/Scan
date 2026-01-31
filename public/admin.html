@@ -28,26 +28,30 @@
 
 <script>
 async function loadList() {
-  const res = await fetch("/list");
-  const data = await res.json();
-  const tbody = document.getElementById("list");
-  tbody.innerHTML = "";
+  try {
+    const res = await fetch("/list");
+    const data = await res.json();
+    const tbody = document.getElementById("list");
+    tbody.innerHTML = "";
 
-  data.forEach(row => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${row.id}</td>
-      <td>${row.name}</td>
-      <td>${row.seat}</td>
-      <td>${row.qr_value}</td>
-      <td>${row.scanned_at}</td>
-      <td>
-        <button onclick="approve(${row.id})">Approve</button>
-        <button onclick="decline(${row.id})">Decline</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+    data.forEach(row => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${row.id}</td>
+        <td>${row.name}</td>
+        <td>${row.seat}</td>
+        <td>${row.qr_value}</td>
+        <td>${row.scanned_at}</td>
+        <td>
+          <button onclick="approve(${row.id})">Approve</button>
+          <button onclick="decline(${row.id})">Decline</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(err) {
+    console.error(err);
+  }
 }
 
 async function approve(id) {
@@ -68,7 +72,7 @@ async function decline(id) {
   loadList();
 }
 
-// Refresh every 3 seconds
+// Auto-refresh every 3 seconds
 setInterval(loadList, 3000);
 loadList();
 </script>
