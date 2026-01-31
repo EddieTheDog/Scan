@@ -1,16 +1,16 @@
-const REFRESH_INTERVAL = 14;
-let countdown = REFRESH_INTERVAL;
-let countdownTimer = null;
+const INTERVAL = 14;
+let countdown = INTERVAL;
+let timer = null;
 
-async function loadPending() {
+async function load() {
   const res = await fetch("/list");
   const data = await res.json();
 
-  const container = document.getElementById("list");
-  container.innerHTML = "";
+  const list = document.getElementById("list");
+  list.innerHTML = "";
 
   if (!data.length) {
-    container.innerHTML = "<p>No pending check-ins.</p>";
+    list.innerHTML = "<p>No pending check-ins.</p>";
     return;
   }
 
@@ -27,7 +27,7 @@ async function loadPending() {
       <button onclick="setStatus(${row.id}, 'declined')">Decline</button>
     `;
 
-    container.appendChild(div);
+    list.appendChild(div);
   });
 }
 
@@ -41,12 +41,17 @@ async function setStatus(id, status) {
   manualRefresh();
 }
 
-function startCountdown() {
-  clearInterval(countdownTimer);
-  countdown = REFRESH_INTERVAL;
+function manualRefresh() {
+  clearInterval(timer);
+  load();
+  startTimer();
+}
+
+function startTimer() {
+  countdown = INTERVAL;
   updateCountdown();
 
-  countdownTimer = setInterval(() => {
+  timer = setInterval(() => {
     countdown--;
     updateCountdown();
 
@@ -61,12 +66,6 @@ function updateCountdown() {
     `Auto refresh in ${countdown}s`;
 }
 
-function manualRefresh() {
-  clearInterval(countdownTimer);
-  loadPending();
-  startCountdown();
-}
-
-// Initial load
-loadPending();
-startCountdown();
+// INIT
+load();
+startTimer();
