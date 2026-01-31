@@ -5,7 +5,7 @@ export async function onRequestGet({ env }) {
     const { results } = await env.DB.prepare(`
       SELECT * FROM checkins
       ORDER BY scanned_at DESC
-      LIMIT 20
+      LIMIT 50
     `).all();
 
     return new Response(JSON.stringify(results), {
