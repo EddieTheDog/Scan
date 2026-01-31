@@ -3,16 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <title>Event Check-In</title>
+  <style>
+    .page { display: none; }
+    .active { display: block; }
+    #status { margin-top: 10px; font-weight: bold; color: blue; }
+  </style>
 </head>
 <body>
-  <h1>Scan QR & Enter Info</h1>
-  <label>QR Code:</label>
-  <input type="text" id="qr" placeholder="Scan QR or enter URL"><br><br>
-  <label>Name:</label>
-  <input type="text" id="name" placeholder="Full name"><br><br>
-  <label>Seat:</label>
-  <input type="text" id="seat" placeholder="Optional seat"><br><br>
-  <button onclick="submitForm()">Submit</button>
+
+  <!-- Page 1: QR Entry -->
+  <div id="qrPage" class="page active">
+    <h2>Enter QR Code</h2>
+    <input type="text" id="qr" placeholder="Scan QR or enter manually"><br><br>
+    <button onclick="goToInfo()">Next</button>
+  </div>
+
+  <!-- Page 2: Info Entry -->
+  <div id="infoPage" class="page">
+    <h2>Enter Info</h2>
+    <label>Name:</label>
+    <input type="text" id="name" placeholder="Full name"><br><br>
+    <label>Seat:</label>
+    <input type="text" id="seat" placeholder="Optional seat"><br><br>
+    <button onclick="submitForm()">Submit</button>
+    <div id="status"></div>
+  </div>
 
   <script src="intake.js"></script>
 </body>
