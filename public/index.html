@@ -7,45 +7,76 @@
   body { font-family: sans-serif; text-align: center; padding: 50px; }
   input, button { font-size: 1rem; padding: 0.5rem; margin: 0.5rem; }
   #status { margin-top: 1rem; font-weight: bold; }
+  video { width: 300px; height: 200px; border: 1px solid #ccc; }
 </style>
 </head>
 <body>
 <h1>QR Code Check-In</h1>
 
-<input id="qr" placeholder="QR Code Value" />
 <input id="name" placeholder="Your Name" />
 <input id="seat" placeholder="Seat Number (Optional)" />
-<button onclick="submitCheckIn()">Submit</button>
-
+<div>
+  <video id="preview"></video>
+</div>
 <div id="status"></div>
 
+<script src="https://unpkg.com/html5-qrcode"></script>
 <script>
+const statusEl = document.getElementById("status");
+let scannedQR = null;
+
+// Initialize QR scanner
+const html5QrCode = new Html5Qrcode("preview");
+html5QrCode.start(
+  { facingMode: "environment" },
+  { fps: 10, qrbox: 250 },
+  qrCodeMessage => {
+    scannedQR = qrCodeMessage;
+    statusEl.textContent = "QR scanned: " + scannedQR;
+    submitCheckIn(); // Auto-submit after scanning
+    html5QrCode.stop();
+  }
+).catch(err => console.log("QR scanner error:", err));
+
 async function submitCheckIn() {
-  const qr = document.getElementById("qr").value;
+  if (!scannedQR) return;
   const name = document.getElementById("name").value;
   const seat = document.getElementById("seat").value;
-  if(!qr || !name) {
-    alert("QR and Name are required");
+  if(!name) {
+    alert("Name is required");
     return;
   }
 
-  document.getElementById("status").textContent = "Submitting...";
-  
-  await fetch("/submit", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ qr, name, seat })
-  });
+  statusEl.textContent = "Submitting...";
 
-  document.getElementById("status").textContent = "Waiting for approval...";
-
-  // Start polling every 3 seconds
-  const interval = setInterval(async () => {
-    const res = await fetch(`/status?qr=${encodeURIComponent(qr)}`);
+  try {
+    const res = await fetch("/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qr: scannedQR, name, seat })
+    });
     const data = await res.json();
-    if(data.status !== "pending") {
-      document.getElementById("status").textContent = "Status: " + data.status.toUpperCase();
-      clearInterval(interval);
+    if(data.ok) {
+      statusEl.textContent = "Waiting for approval...";
+      pollStatus();
+    }
+  } catch(err) {
+    statusEl.textContent = "Error submitting check-in";
+    console.error(err);
+  }
+}
+
+function pollStatus() {
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch(`/status?qr=${encodeURIComponent(scannedQR)}`);
+      const data = await res.json();
+      if(data.status !== "pending") {
+        statusEl.textContent = "Status: " + data.status.toUpperCase();
+        clearInterval(interval);
+      }
+    } catch(err) {
+      console.error(err);
     }
   }, 3000);
 }
